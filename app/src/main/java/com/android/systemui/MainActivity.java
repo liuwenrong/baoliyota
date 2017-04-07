@@ -1,33 +1,43 @@
+/* *
+   * Copyright (C) 2017 BaoliYota Tech. Co., Ltd, LLC - All Rights Reserved.
+   *
+   * Confidential and Proprietary.
+   * Unauthorized copying of this file, via any medium is strictly prohibited.
+   * */
+
 package com.android.systemui;
 
 import android.app.WallpaperManager;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.Drawable;
+import android.hardware.display.DisplayManager;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.Display;
 import android.view.View;
 import android.widget.Button;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
+import android.widget.FrameLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.baoliyota.contract.IEpdScreenContract;
+import com.android.baoliyota.imageloader.IBaoliYotaImageLoader;
+import com.android.baoliyota.model.ApiConstants;
 import com.android.baoliyota.model.bean.EpdScreenBean;
 import com.android.baoliyota.network.BaoliYotaHttpManager;
 import com.android.baoliyota.network.callback.StringCallback;
 import com.android.baoliyota.network.model.HttpParams;
 import com.android.baoliyota.presenter.EpdScreenPresenter;
 import com.android.systemuib.R;
-import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.resource.drawable.GlideDrawable;
-import com.bumptech.glide.request.animation.GlideAnimation;
-import com.bumptech.glide.request.target.SimpleTarget;
 
 import java.io.IOException;
-import java.util.List;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -36,12 +46,12 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
-import static com.google.gson.internal.$Gson$Preconditions.checkNotNull;
-
-public class MainActivity extends AppCompatActivity implements View.OnClickListener, IEpdScreenContract.IView{
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, IEpdScreenContract.IView {
 
     private static final String TAG = "MainAct";
-    private ImageView mPanelView;
+    private FrameLayout mPanelHolder;
+    private TextView mShowDetailTextView;
+    private Context mContext;
     private IEpdScreenContract.IPresenter mPresenter;
 
     @Override
@@ -50,10 +60,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_test_get);
         initView();
 
-        mPresenter = new EpdScreenPresenter(this);
-        String json = "{ \"code\": 1, \"data\": [ { \"bookId\": 1, \"picUrl\": \"https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1490864224&di=e16630f6fd5f0587f9a1bff2fd1392c2&imgtype=jpg&er=1&src=http%3A%2F%2Fpic21.nipic.com%2F20120511%2F8133282_145011003398_2.jpg\", \"reourceId\": 1, \"resourceType\": 1, \"resourceUrl\": \"www.baidu.com\" }, { \"bookId\": 1, \"picUrl\": \"https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1490269455272&di=7ef929d847836d298dad597acda5994a&imgtype=0&src=http%3A%2F%2Fimg3.redocn.com%2Ftupian%2F20140704%2Fheibaiyutu_2694809.jpg\", \"reourceId\": 1, \"resourceType\": 1, \"resourceUrl\": \"www\" } ], \"msg\": \"success\" } ";
-        Log.i(TAG, "onCreate: json = " + json);
+        mContext = this;
 
+        mWillWallpaperIndex = getWallPaperIndexFromSP(); //
+        mPresenter = new EpdScreenPresenter(this);
+        mPresenter.start();
+//        setEpdWallpaperFromLocal();
     }
 
     void getOk() {
@@ -165,9 +177,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         });
 
+
     }
 
     void postOk() {
+
 
         HttpParams params = new HttpParams();
         params.put("code", "utf-8");
@@ -190,12 +204,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void initView() {
         Button btn_download = (Button) findViewById(R.id.btn_download);
         Button ori_get_btn = (Button) findViewById(R.id.ori_get_btn);
-        LinearLayout activity_main = (LinearLayout) findViewById(R.id.activity_main);
+        FrameLayout activity_main = (FrameLayout) findViewById(R.id.activity_main);
         Button setWallpaperBtn = (Button) findViewById(R.id.set_wallpaper_btn);
-        mPanelView = (ImageView) findViewById(R.id.panel_view);
+        mPanelHolder = (FrameLayout) findViewById(R.id.panel_holder);
+        mShowDetailTextView = (TextView) findViewById(R.id.show_detail_text_view);
         setWallpaperBtn.setOnClickListener(this);
 
-        new EpdScreenBean();
+        mPanelHolder.setOnClickListener(this);
+        mShowDetailTextView.setOnClickListener(this);
         btn_download.setOnClickListener(this);
         ori_get_btn.setOnClickListener(this);
     }
@@ -203,6 +219,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onClick(View v) {
         switch (v.getId()) {
+            case R.id.panel_holder:
+                mPresenter.start();
+                break;
+            case R.id.show_detail_text_view:
+
+//                startBookAppToShowDetail();
+
+                break;
+
             case R.id.btn_download:
 //                Intent intent = new Intent(this, MainActivity.class);
 //                startActivity(intent);
@@ -211,7 +236,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //                getOriOk();
 //                getOk();
 //                postOriOk();
-//                postOk();
+/*                postOk();*/
                 mPresenter.start();
                 break;
             case R.id.set_wallpaper_btn:
@@ -234,10 +259,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    void print(){
+    void print() {
 
 
-        Log.w("xx", "1<<0 = " + (1<<0) + ", 1<<1 = " + (1<<1) + ", 1 | 2 = " + (1 | 2) + ", 7 | 7 = " + (7 | 7));
+        Log.w("xx", "1<<0 = " + (1 << 0) + ", 1<<1 = " + (1 << 1) + ", 1 | 2 = " + (1 | 2) + ", 7 | 7 = " + (7 | 7));
     }
 
     @Override
@@ -246,41 +271,255 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         BaoliYotaHttpManager.getInstance().cancelTag(this);
     }
 
-    @Override
-    public void setPresenter(@NonNull IEpdScreenContract.IPresenter presenter) {
-        mPresenter = checkNotNull(presenter);
-    }
-
     int count = 0;
-    @Override
+
+/*    @Override
     public void setEpdWallpaperFromNet(EpdScreenBean epdScreenBean) {
         List<EpdScreenBean.DataBean> datas = epdScreenBean.getData();
         int size = datas.size();
+        if (count >= size) {
+            count = 0;
+        }
         if (count <= size - 1) {
             EpdScreenBean.DataBean data = datas.get(count);
+            Toast.makeText(this, "count = " + count + ", picURL = " + data.getPicUrl(), Toast.LENGTH_SHORT).show();
             Glide.with(getApplicationContext())
                     .load(data.getPicUrl())
                     .into(simpleTarget);
             data.getResourceType();
             count++;
         }
-        if (count >= size){
-            count = 0;
+
+    }*/
+
+    /**
+     * BaoliYota begin, add
+     * what(reason) 背屏的锁屏壁纸逻辑
+     * liuwenrong@coolpad.com, 1.0, 2017/3/21 */
+    /**
+     * 默认壁纸的资源ID集合
+     */
+    private int[] mWallpaperIds = {R.drawable.ic_bs_wallpaper_01,
+            R.drawable.ic_bs_wallpaper_02,
+            R.drawable.ic_bs_wallpaper_03,
+            R.drawable.ic_bs_wallpaper_04,
+            R.drawable.ic_bs_wallpaper_05,
+            R.drawable.ic_bs_wallpaper_06};
+
+    private int mWillWallpaperIndex;//will Show Index
+
+    /**
+     * 下一个要显示的壁纸的索引,用于在壁纸集合中取将要显示的图片资源ID
+     */
+    public void setWillWallpaperIndex() {
+        mWillWallpaperIndex++;
+        if (mWillWallpaperIndex > mWallpaperIds.length - 1) {
+            mWillWallpaperIndex = mWillWallpaperIndex % (mWallpaperIds.length);
+        }
+        setWallpaperIndexToSharedPreferences(mWillWallpaperIndex);
+    }
+
+    /**
+     * 将要显示的壁纸的资源ID
+     * @return 壁纸资源ID
+     */
+    public int getWillShowWallpaperId() {
+        if (mWillWallpaperIndex > mWallpaperIds.length - 1) {
+            mWillWallpaperIndex = 0;
+        }
+        return mWallpaperIds[mWillWallpaperIndex];
+    }
+
+    /**
+     * setWallpaper on BackScreen 设置背屏的锁屏壁纸 从本地默认的壁纸中
+     * liuwenrong@coolpad.com 17/03/16
+     */
+//    public void setEpdLockScreenWallpaper(){
+    @Override
+    public void setEpdWallpaperFromLocal() {
+
+        Log.i(TAG, "setEpdWallpaperFromLocal: " + Log.getStackTraceString(new Throwable()));
+        mPanelHolder.setBackgroundResource(getWillShowWallpaperId());
+        mShowDetailTextView.setVisibility(View.GONE);
+        DisplayManager displayManager = (DisplayManager) mContext.getSystemService(Context.DISPLAY_SERVICE);
+        Display[] displays = displayManager.getDisplays();
+        android.widget.Toast.makeText(mContext.createDisplayContext(displays[0]), "背屏已上锁", Toast.LENGTH_SHORT).show();
+        mPanelHolder.setVisibility(View.VISIBLE);
+        setWillWallpaperIndex();
+
+    }
+
+    private SharedPreferences mSharedPreferences;// 共享参数,判断是否第一次打开SystemUI,记录当前第几张壁纸
+
+    public static final String SHARED_PREFERENCES_NAME = "baoliyota_spf";
+
+    /**
+     * @return SharedPreferences对象
+     */
+    public SharedPreferences getSharedPreferences() {
+        if (mSharedPreferences == null) {
+            mSharedPreferences = mContext.getSharedPreferences(SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE);
+        }
+        return mSharedPreferences;
+    }
+
+    /**
+     * 从共享参数中读取,一般第一次启动时调用
+     * @return 将要显示的壁纸的索引
+     */
+    public int getWallPaperIndexFromSP() {
+        if (mSharedPreferences == null) {
+            mSharedPreferences = mContext.getSharedPreferences(SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE);
+        }
+        return mSharedPreferences.getInt("wallpaperIndex", 0);
+
+    }
+
+    /**
+     * 设置壁纸索引存储到共享参数中
+     *
+     * @param index 将要显示的壁纸的索引
+     */
+    public void setWallpaperIndexToSharedPreferences(int index) {
+        SharedPreferences.Editor editor = mSharedPreferences.edit();
+        editor.putInt("wallpaperIndex", index);
+        editor.commit();
+    }
+
+    /**
+     * Mvp中的回调方法,从设置中读取状态后去设置壁纸
+     *
+     * @param isOpen
+     */
+    @Override
+    public void setEpdWallpaper(boolean isOpen) {
+
+        if (isOpen) {
+            android.util.Log.i(TAG + "--170324", "setEpdWallpaper: 设置壁纸");
+            if (com.android.baoliyota.network.Utils.isNetworkConnected(mContext)) {
+
+                mPresenter.start();//先从网络获取背屏数据
+            } else {
+
+                setEpdWallpaperFromLocal();
+//                setEpdLockScreenWallpaper();
+            }
+        } else {
+            mPanelHolder.setBackgroundResource(0);//设置为透明的壁纸
+//            mPanelHolder.setVisibility(View.INVISIBLE);
+//            mBackdrop.setVisibility(View.INVISIBLE);
+//            mBackdrop.setBackgroundResource(0);
+//            mBackdropBack.setVisibility(View.INVISIBLE);
+//            mCustomLockScreenCover.setVisibility(View.INVISIBLE);
+
+        }
+    }
+
+    EpdScreenBean.DataBean mBookData;
+
+    /**
+     * 设置图书推荐
+     *
+     * @param data 图书推荐一本书的的数据
+     * @param type 类型:指定哪个阅读器,如BR,IReader掌阅
+     */
+    @Override
+    public void setEpdBookRecommend(EpdScreenBean.DataBean data, int type) {
+
+        mShowDetailTextView.setVisibility(View.VISIBLE);
+        mBookData = data;
+
+        Log.i(TAG, "setEpdBookRecommend: " + Log.getStackTraceString(new Throwable()));
+        switch (type) {
+            case ApiConstants.RES_TYPE_BACK_READER:
+                mShowDetailTextView.setOnClickListener(onStartBRListener);
+                break;
+            case ApiConstants.RES_TYPE_IREADER:
+                mShowDetailTextView.setOnClickListener(onStartIRListener);
+                break;
+        }
+
+        mPresenter.loadImage(data.getPicUrl(), loaderListener);
+
+    }
+
+    /**
+     * Mvp中的回调方法,从网络数据中设置壁纸
+     *
+     * @param data 单个壁纸的数据
+     */
+    @Override
+    public void setEpdWallpaperFromNet(EpdScreenBean.DataBean data) {
+
+        mShowDetailTextView.setVisibility(View.GONE);
+        mPresenter.loadImage(data.getPicUrl(), loaderListener);
+    }
+
+
+    IBaoliYotaImageLoader.LoaderListener<Drawable> loaderListener = new IBaoliYotaImageLoader.LoaderListener<Drawable>() {
+        @Override
+        public void onResourceReady(Drawable drawable) {
+            mPanelHolder.setBackground(drawable);
+            mPanelHolder.setVisibility(View.VISIBLE);
+
+        }
+
+        @Override
+        public void onLoadFailed(Exception e, Drawable errorDrawable) {
+            setEpdWallpaperFromLocal();
+
+        }
+    };
+
+    @Override
+    public void setPresenter(@NonNull IEpdScreenContract.IPresenter presenter) {
+//        mPresenter = checkNotNull(presenter);
+    }
+
+    @Override
+    public Context getContext() {
+        return mContext;
+    }
+
+
+    private void startBookAppToShowDetail(String packageName, String className) {
+
+        if (mBookData == null) {
+            return;
+        }
+
+        try {
+            // 指定包名和类名
+            Intent intent = new Intent(Intent.ACTION_MAIN);
+            intent.addCategory(Intent.CATEGORY_LAUNCHER);
+            ComponentName cn = new ComponentName(packageName, className);
+            intent.setComponent(cn);
+            intent.putExtra(ApiConstants.INTENT_FLAG_TYPE, ApiConstants.FLAG_TYPE_EPD_SCREEN);
+            intent.putExtra(ApiConstants.INTENT_BOOK_ID, mBookData.getBookId());
+            // TODO: 2017/3/30  由于BR还没做完图书推荐的处理,
+//            startActivity(intent);
+            Toast.makeText(mContext, "当前阅读器不存在", Toast.LENGTH_LONG).show();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(mContext, "当前阅读器不存在", Toast.LENGTH_LONG).show();
+        } finally {
         }
 
     }
 
-    SimpleTarget<GlideDrawable> simpleTarget = new SimpleTarget<GlideDrawable>() {
-
-            @Override
-            public void onResourceReady(GlideDrawable drawable, GlideAnimation<? super GlideDrawable> glideAnimation) {
-                mPanelView.setImageDrawable(drawable);
-            }
-
+    View.OnClickListener onStartBRListener = new View.OnClickListener() {
         @Override
-        public void onLoadFailed(Exception e, Drawable errorDrawable) {
-            super.onLoadFailed(e, errorDrawable);
+        public void onClick(View v) {
+            Log.i(TAG, "onClick: " + Log.getStackTraceString(new Throwable()));
+            startBookAppToShowDetail(ApiConstants.BR_PACKAGE_NAME, ApiConstants.BR_CLASS_NAME);
+        }
+    };
 
+    View.OnClickListener onStartIRListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+//            startBookAppToShowDetail(ApiConstants.IR_PACKAGE_NAME, ApiConstants.IR_CLASS_NAME);
+            Toast.makeText(mContext, "IR阅读器不存在", Toast.LENGTH_LONG).show();
         }
     };
 }

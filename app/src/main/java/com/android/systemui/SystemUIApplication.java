@@ -8,11 +8,9 @@
 package com.android.systemui;
 
 import android.app.Application;
-import android.content.Context;
+import android.content.res.Configuration;
 
 import com.android.baoliyota.network.BaoliYotaHttpManager;
-
-import static android.R.attr.x;
 
 /**
  * des:
@@ -21,9 +19,24 @@ import static android.R.attr.x;
  * @version 1.0, 2017/3/21
  */
 public class SystemUIApplication extends Application {
+    int ONE = 1;
     @Override
     public void onCreate() {
+
         super.onCreate();
-        BaoliYoaHttpManager.getInstance().init(this);
+
+        int one = ONE;
+        int four = one + one + one + one;
+        BaoliYotaHttpManager.getInstance().init(this);
+    }
+
+    boolean getIsEmpty(){
+        String s = "..";
+        return !s.isEmpty();
+
+    }
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
     }
 }

@@ -3,6 +3,8 @@ package com.android.baoliyota.model.bean;
 import java.util.List;
 
 /**
+ * Bean类,服务器获取的锁屏和图书推荐的封装类
+ *
  * @author liuwenrong@coolpad.com
  * @version 1.0, 2017/3/20
  */
@@ -14,7 +16,6 @@ public class EpdScreenBean {
      * data : [{"bookId":1,"picUrl":"测试内容q74t","reourceId":1,"resourceType":1,"resourceUrl":"测试内容5b6q"}]
      * msg : 测试内容tyh6
      */
-
     private int code;
     private String msg;
     private List<DataBean> data;
@@ -47,9 +48,11 @@ public class EpdScreenBean {
         /**
          * bookId : 1
          * picUrl : 测试内容q74t
-         * reourceId : 1
+         * resourceId : 1
          * resourceType : 1
          * resourceUrl : 测试内容5b6q
+         * invalidTime : 14935...
+         * validTime : 149...
          */
 
         private long bookId;
@@ -57,6 +60,24 @@ public class EpdScreenBean {
         private long resourceId;
         private int resourceType;
         private String resourceUrl;
+        private long validTime;
+        private long invalidTime;
+
+        public long getValidTime() {
+            return validTime;
+        }
+
+        public void setValidTime(long validTime) {
+            this.validTime = validTime;
+        }
+
+        public long getInvalidTime() {
+            return invalidTime;
+        }
+
+        public void setInvalidTime(long invalidTime) {
+            this.invalidTime = invalidTime;
+        }
 
         public long getBookId() {
             return bookId;
@@ -74,11 +95,11 @@ public class EpdScreenBean {
             this.picUrl = picUrl;
         }
 
-        public long getReourceId() {
+        public long getResourceId() {
             return resourceId;
         }
 
-        public void setReourceId(long resourceId) {
+        public void setResourceId(long resourceId) {
             this.resourceId = resourceId;
         }
 

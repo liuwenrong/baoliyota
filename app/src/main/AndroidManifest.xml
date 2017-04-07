@@ -4,6 +4,7 @@
 
     <uses-permission android:name="android.permission.INTERNET"></uses-permission>
     <uses-permission android:name="android.permission.READ_PHONE_STATE"></uses-permission>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"></uses-permission>
     <application
         android:name="com.android.systemui.SystemUIApplication"
         android:allowBackup="true"
@@ -12,6 +13,11 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+        <!--自定义的GlideModule-->
+        <meta-data
+            android:name="com.android.baoliyota.imageloader.BaoliYotaGlideModule"
+            android:value="GlideModule"/>
+
         <activity android:name="com.android.systemui.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
