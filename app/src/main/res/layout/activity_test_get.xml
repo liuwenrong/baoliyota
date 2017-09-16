@@ -7,9 +7,11 @@
     >
 
     <TextView
+        android:id="@+id/tv"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:visibility="gone"
+        android:visibility="visible"
+        android:textSize="@dimen/tv1_size"
         android:text="Hello World!" />
 
     <Button
@@ -29,10 +31,13 @@
         />
 
     <Button
+        android:onClick="onClick"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/set_wallpaper_btn"
-        android:visibility="gone"
+        android:textSize="20dp"
+        android:layout_marginTop="@dimen/margin_top"
+        android:visibility="visible"
         android:text="设置壁纸"
         />
 
@@ -42,6 +47,7 @@
         android:clickable="true"
         android:id="@+id/panel_holder"/>
 
+<!--    android:background="@drawable/ic_bs_wallpaper_04"-->
     <TextView
         android:id="@+id/show_detail_text_view"
         android:layout_width="wrap_content"

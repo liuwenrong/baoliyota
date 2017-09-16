@@ -1,5 +1,10 @@
 apply plugin: 'com.android.application'
 
+//apply from: './coolyota.gradle'
+def releaseTime() {
+    return new Date().format("yyyy-MM-dd", TimeZone.getTimeZone("UTC"))
+}
+
 android {
     compileSdkVersion 25
     buildToolsVersion "25.0.2"
@@ -16,11 +21,55 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+        /*debug {
+            buildConfigField "boolean", "LOG_DEBUG", "true"
+            buildConfigField "String", "BASE_URL", "\"http://test.dcss.baoliyota.com\""
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // 移除无用的resource文件
+//            shrinkResources true
+            applicationVariants.all { variant ->
+                variant.outputs.each { output ->
+                    def outputFile = output.outputFile
+                    if (outputFile != null && outputFile.name.endsWith('.apk')) {
+                        // 输出apk名称为
+                        def fileName
+                        if (variant.buildType.name.equals('release')) {
+                            fileName = "cy_demo-${defaultConfig.versionName}_${releaseTime()}_${variant.productFlavors[0].name}.apk"
+                        } else if (variant.buildType.name.equals('debug')) {
+                            fileName = "cy_demo-${defaultConfig.versionName}_${releaseTime()}_${variant.productFlavors[0].name}-debug.apk"
+                        }
+                        output.outputFile = new File(outputFile.parent, fileName)
+                    }
+                }
+            }
+        }*/
     }
+
+    /*productFlavors { //多渠道
+        baoliyota {}
+        coolyota {}
+        productFlavors.all { flavor ->
+            flavor.manifestPlaceholders = [CHANNEL_VALUE: name]
+        }
+    }
+    sourceSets {
+        defaultConfig {
+            java.srcDir './src/main/java'
+            java.srcDir '../cylib/src/main/java'
+        }
+    }*/
+
 }
+/*
+repositories {
+    flatDir {
+        dirs 'libs'
+    }
+}*/
 
 dependencies {
-    compile fileTree(include: ['*.jar'], dir: 'libs')
+//    compile fileTree(include: ['*.jar'], dir: 'libs')
     androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
@@ -28,8 +77,10 @@ dependencies {
     compile 'com.android.support.constraint:constraint-layout:1.0.2'
     compile 'com.android.support:design:25.1.1'
     testCompile 'junit:junit:4.12'
-    compile files('libs/okhttp-3.6.0.jar')
-    compile files('libs/okio-1.11.0.jar')
+//    compile files('libs/okhttp-3.6.0.jar')
+//    compile files('libs/okio-1.11.0.jar')
     compile files('libs/gson-2.8.0.jar')
     compile files('libs/glide-3.7.0.jar')
+    //    compile files('libs/cy_analysis-1.2.jar')
+    compile project(':cylib')
 }

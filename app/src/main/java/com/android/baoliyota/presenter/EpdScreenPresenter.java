@@ -87,6 +87,11 @@ public class EpdScreenPresenter implements IPresenter, OnEpdScreenDataListener {
             mView.setEpdWallpaperFromLocal();//网络数据为0时,去设置本地的默认壁纸
             return;
         }
+        if (epdScreenBean.getCode() != ApiConstants.ResponseCode.SUCCESS) {
+            Log.w(TAG, "onSuccess: msg = " + epdScreenBean.getMsg());
+            mView.setEpdWallpaperFromLocal();
+            return;
+        }
 
         List<EpdScreenBean.DataBean> datas = epdScreenBean.getData();
         if (datas == null){ //有接口数据,但壁纸和图书推荐集合为空,或者请求参数错误

@@ -100,7 +100,7 @@ public class EpdScreenModel implements IEpdScreenModel {
     public void loadData(final OnEpdScreenDataListener listener) {
         JSONObject jsonObject = new JSONObject();
         try {
-            jsonObject.put("appType", 0);
+            jsonObject.put(ApiConstants.PARAM_APP_TYPE, 0);
 //        jsonObject.put("userID", 0); //锁屏可以不传
         } catch (JSONException e) {
             e.printStackTrace();
@@ -131,19 +131,14 @@ public class EpdScreenModel implements IEpdScreenModel {
                      */
                     @Override
                     public EpdScreenBean convertSuccess(Response response) throws Exception {
-
-
-//                        String json = response.body().string();
-//                        Log.i(TAG + "--1703", "convertSuccess: json = " + json);
                         Gson gson = new GsonBuilder().create();
-//                        EpdScreenBean epdScreenBean;
-//                        epdScreenBean = gson.fromJson(json, EpdScreenBean.class);
 
-//
-                        String jsonLocal = "{ \"code\": 1, \"data\": [ { \"bookId\": 1, \"picUrl\": \"https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1490864224&di=e16630f6fd5f0587f9a1bff2fd1392c2&imgtype=jpg&er=1&src=http%3A%2F%2Fpic21.nipic.com%2F20120511%2F8133282_145011003398_2.jpg\", \"reourceId\": 1, \"resourceType\": 1, \"resourceUrl\": \"www.baidu.com\" }, { \"bookId\": 1, \"picUrl\": \"https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1490269455272&di=7ef929d847836d298dad597acda5994a&imgtype=0&src=http%3A%2F%2Fimg3.redocn.com%2Ftupian%2F20140704%2Fheibaiyutu_2694809.jpg\", \"reourceId\": 1, \"resourceType\": 1, \"resourceUrl\": \"www\" } ], \"msg\": \"success\" } ";
-                        EpdScreenBean epdScreenBean = gson.fromJson(jsonLocal, EpdScreenBean.class);
-                        Log.i(TAG + "--1703", "onCreate: json = " + jsonLocal);
-                        Log.i(TAG, "convertSuccess: " + epdScreenBean.toString());
+//                        String json = "{ \"code\": 1, \"data\": [ { \"bookId\": 1, \"picUrl\": \"https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1490864224&di=e16630f6fd5f0587f9a1bff2fd1392c2&imgtype=jpg&er=1&src=http%3A%2F%2Fpic21.nipic.com%2F20120511%2F8133282_145011003398_2.jpg\", \"reourceId\": 1, \"resourceType\": 1, \"resourceUrl\": \"www.baidu.com\" }, { \"bookId\": 1, \"picUrl\": \"https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1490269455272&di=7ef929d847836d298dad597acda5994a&imgtype=0&src=http%3A%2F%2Fimg3.redocn.com%2Ftupian%2F20140704%2Fheibaiyutu_2694809.jpg\", \"reourceId\": 2, \"resourceType\": 1, \"resourceUrl\": \"www\" } ], \"msg\": \"success\" } ";
+//                        Log.i(TAG + "--1703232005", "onCreate: json = " + json);
+                        String json = response.body().string();
+                        Log.i(TAG + "--1703", "convertSuccess: json = " + json);
+                        EpdScreenBean epdScreenBean;
+                        epdScreenBean = gson.fromJson(json, EpdScreenBean.class);
 
                         return epdScreenBean;
                     }
@@ -207,17 +202,22 @@ public class EpdScreenModel implements IEpdScreenModel {
     @Override
     public void preLoadAllImage(List<EpdScreenBean.DataBean> datas, Context context) {
 
-        for (int i = 0; i < datas.size(); i++) {
-            EpdScreenBean.DataBean data = datas.get(i);
+        for (EpdScreenBean.DataBean data : datas) {
             if (data.getPicUrl() != null && !"".equals(data.getPicUrl())){
                 mBaoliYotaImageLoader.preLoad(context, data.getPicUrl());
             }
         }
+/*        for (int i = 0; i < datas.size(); i++) {
+            EpdScreenBean.DataBean data = datas.get(i);
+            if (data.getPicUrl() != null && !"".equals(data.getPicUrl())){
+                mBaoliYotaImageLoader.preLoad(context, data.getPicUrl());
+            }
+        }*/
 
     }
 
     /**
-     * 加载网络图片
+     * 从内存或缓存中加载网络图片
      * @param context
      * @param url 网络图片url
      * @param listener 图片数据返回的监听
@@ -239,7 +239,6 @@ public class EpdScreenModel implements IEpdScreenModel {
 
     /**
      * 为目标url添加通用get参数
-     *
      * @param urlString 目标url
      * @param token     token不需要可以是null
      * @return 装饰过公共get参数以后的url
@@ -247,7 +246,7 @@ public class EpdScreenModel implements IEpdScreenModel {
     private String decorateCommonParams(String urlString, @Nullable String token) {
         Map<String, String> map = new HashMap<String, String>();
         map.put(ApiConstants.PARAM_APP_ID, ApiConstants.APP_ID);
-        map.put(ApiConstants.PARAM_VERSION, "1");
+        map.put(ApiConstants.PARAM_VERSION, ApiConstants.getVersion());
         map.put(ApiConstants.PARAM_TIME_STAMP, String.valueOf(System.currentTimeMillis()));
         map.put(ApiConstants.PARAM_APP_TOKEN, UrlBuilder.buildSign(map, token));
         if (!TextUtils.isEmpty(token)) {

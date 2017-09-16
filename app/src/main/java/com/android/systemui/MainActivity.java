@@ -7,21 +7,21 @@
 
 package com.android.systemui;
 
-import android.app.WallpaperManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.drawable.Drawable;
 import android.hardware.display.DisplayManager;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
+import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.Display;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.TextView;
@@ -36,6 +36,8 @@ import com.android.baoliyota.network.callback.StringCallback;
 import com.android.baoliyota.network.model.HttpParams;
 import com.android.baoliyota.presenter.EpdScreenPresenter;
 import com.android.systemuib.R;
+import com.coolyota.analysis.CYAnalysis;
+import com.google.gson.GsonBuilder;
 
 import java.io.IOException;
 
@@ -48,23 +50,108 @@ import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, IEpdScreenContract.IView {
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        CYAnalysis.onResume(this, "SPage");
+
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        CYAnalysis.onPause(this);
+    }
+
+    public static final String SERVER = "http://server.jeasonlzy.com/OkHttpUtils/";
+    //    public static final String SERVER = "http://192.168.1.121:8080/OkHttpUtils/";
+    public static final String URL_METHOD = SERVER + "method";
+    public static final String SHARED_PREFERENCES_NAME = "baoliyota_spf";
     private static final String TAG = "MainAct";
+    TextView tv;
+    Button btn;
+    OkHttpClient client = new OkHttpClient();
+    int count = 0;
     private FrameLayout mPanelHolder;
-    private TextView mShowDetailTextView;
     private Context mContext;
+    View.OnClickListener onStartIRListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+//            startBookAppToShowDetail(ApiConstants.IR_PACKAGE_NAME, ApiConstants.IR_CLASS_NAME);
+            Toast.makeText(mContext, "IR阅读器不存在", Toast.LENGTH_LONG).show();
+        }
+    };
     private IEpdScreenContract.IPresenter mPresenter;
+    private Button setWallpaperBtn;
+    /**
+     * 默认壁纸的资源ID集合
+     */
+    private int[] mWallpaperIds = {R.drawable.ic_bs_wallpaper_01,
+            R.drawable.ic_bs_wallpaper_02,
+            R.drawable.ic_bs_wallpaper_03,
+            R.drawable.ic_bs_wallpaper_04,
+            R.drawable.ic_bs_wallpaper_05,
+            R.drawable.ic_bs_wallpaper_06};
+    private int mWillWallpaperIndex;//will Show Index
+    private SharedPreferences mSharedPreferences;// 共享参数,判断是否第一次打开SystemUI,记录当前第几张壁纸
+    private TextView mShowDetailTextView;
+    IBaoliYotaImageLoader.LoaderListener<Drawable> loaderListener = new IBaoliYotaImageLoader.LoaderListener<Drawable>() {
+        @Override
+        public void onResourceReady(Drawable drawable) {
+            mPanelHolder.setBackground(drawable);
+            mPanelHolder.setVisibility(View.VISIBLE);
+
+        }
+
+        @Override
+        public void onLoadFailed(Exception e, Drawable errorDrawable) {
+            setEpdWallpaperFromLocal();
+        }
+    };
+    private EpdScreenBean.DataBean mBookData;
+    View.OnClickListener onStartBRListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            startBookAppToShowDetail(ApiConstants.BR_PACKAGE_NAME, ApiConstants.BR_CLASS_NAME);
+        }
+    };
+
+/*    @Override
+    public void setEpdWallpaperFromNet(EpdScreenBean epdScreenBean) {
+        List<EpdScreenBean.DataBean> datas = epdScreenBean.getData();
+        int size = datas.size();
+        if (count >= size) {
+            count = 0;
+        }
+        if (count <= size - 1) {
+            EpdScreenBean.DataBean data = datas.get(count);
+            Toast.makeText(this, "count = " + count + ", picURL = " + data.getPicUrl(), Toast.LENGTH_SHORT).show();
+            Glide.with(getApplicationContext())
+                    .load(data.getPicUrl())
+                    .into(simpleTarget);
+            data.getResourceType();
+            count++;
+        }
+
+    }*/
+
+    /**
+     * BaoliYota begin, add
+     * what(reason) 背屏的锁屏壁纸逻辑
+     * liuwenrong@coolpad.com, 1.0, 2017/3/21 */
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        mContext = SystemUIApplication.getContext();
         setContentView(R.layout.activity_test_get);
         initView();
 
-        mContext = this;
+
 
         mWillWallpaperIndex = getWallPaperIndexFromSP(); //
         mPresenter = new EpdScreenPresenter(this);
-        mPresenter.start();
+//        mPresenter.start();
 //        setEpdWallpaperFromLocal();
     }
 
@@ -90,12 +177,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 
     }
-
-    public static final String SERVER = "http://server.jeasonlzy.com/OkHttpUtils/";
-    //    public static final String SERVER = "http://192.168.1.121:8080/OkHttpUtils/";
-    public static final String URL_METHOD = SERVER + "method";
-
-    OkHttpClient client = new OkHttpClient();
 
     public void getOriOk() {
         FormBody formBody = new FormBody.Builder()
@@ -205,11 +286,24 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Button btn_download = (Button) findViewById(R.id.btn_download);
         Button ori_get_btn = (Button) findViewById(R.id.ori_get_btn);
         FrameLayout activity_main = (FrameLayout) findViewById(R.id.activity_main);
-        Button setWallpaperBtn = (Button) findViewById(R.id.set_wallpaper_btn);
+        tv = (TextView) findViewById(R.id.tv);
+        setWallpaperBtn = (Button) findViewById(R.id.set_wallpaper_btn);
         mPanelHolder = (FrameLayout) findViewById(R.id.panel_holder);
         mShowDetailTextView = (TextView) findViewById(R.id.show_detail_text_view);
-        setWallpaperBtn.setOnClickListener(this);
 
+        DisplayManager dm = (DisplayManager) mContext.getSystemService(Context.DISPLAY_SERVICE);
+        dm.getDisplays();
+        Display display = dm.getDisplay(0);
+        DisplayMetrics dm2 = new DisplayMetrics();
+        display.getMetrics(dm2);
+
+        float size = 21 * dm2.density;
+//        tv.setTextSize(TypedValue.COMPLEX_UNIT_PX, size);
+        tv.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 21);
+//        display.get
+
+
+        setWallpaperBtn.setOnClickListener(this);
         mPanelHolder.setOnClickListener(this);
         mShowDetailTextView.setOnClickListener(this);
         btn_download.setOnClickListener(this);
@@ -220,7 +314,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.panel_holder:
-                mPresenter.start();
+//                mPresenter.start();
                 break;
             case R.id.show_detail_text_view:
 
@@ -241,9 +335,27 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.set_wallpaper_btn:
 
-                print();
+                Context c = this;
+                String packageName = c.getPackageName();
+                String p2 = mContext.getPackageName();
+
+                WindowManager windowManager = getWindowManager();
+                Display display = windowManager.getDefaultDisplay();
+                int screenWidth = display.getWidth();
+                int screenHeight = display.getHeight();
+
+                // 方法2
+                DisplayMetrics dm = new DisplayMetrics();
+                getWindowManager().getDefaultDisplay().getMetrics(dm);
+//        dm.widthPixels * dm.density;
+//        float height = dm.heightPixels * dm.density;
+                float f1 = tv.getTextSize();
+                float f2 = setWallpaperBtn.getTextSize();
+                float f3 = setWallpaperBtn.getTextSize();
+
+               /* print();
                 WallpaperManager wpm = WallpaperManager.getInstance(getApplicationContext());
-                Bitmap bm = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher);
+                Bitmap bm = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher);*/
                 /*try {
 //                    wpm.setBitmap(bm);
 
@@ -271,43 +383,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         BaoliYotaHttpManager.getInstance().cancelTag(this);
     }
 
-    int count = 0;
-
-/*    @Override
-    public void setEpdWallpaperFromNet(EpdScreenBean epdScreenBean) {
-        List<EpdScreenBean.DataBean> datas = epdScreenBean.getData();
-        int size = datas.size();
-        if (count >= size) {
-            count = 0;
-        }
-        if (count <= size - 1) {
-            EpdScreenBean.DataBean data = datas.get(count);
-            Toast.makeText(this, "count = " + count + ", picURL = " + data.getPicUrl(), Toast.LENGTH_SHORT).show();
-            Glide.with(getApplicationContext())
-                    .load(data.getPicUrl())
-                    .into(simpleTarget);
-            data.getResourceType();
-            count++;
-        }
-
-    }*/
-
-    /**
-     * BaoliYota begin, add
-     * what(reason) 背屏的锁屏壁纸逻辑
-     * liuwenrong@coolpad.com, 1.0, 2017/3/21 */
-    /**
-     * 默认壁纸的资源ID集合
-     */
-    private int[] mWallpaperIds = {R.drawable.ic_bs_wallpaper_01,
-            R.drawable.ic_bs_wallpaper_02,
-            R.drawable.ic_bs_wallpaper_03,
-            R.drawable.ic_bs_wallpaper_04,
-            R.drawable.ic_bs_wallpaper_05,
-            R.drawable.ic_bs_wallpaper_06};
-
-    private int mWillWallpaperIndex;//will Show Index
-
     /**
      * 下一个要显示的壁纸的索引,用于在壁纸集合中取将要显示的图片资源ID
      */
@@ -321,6 +396,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     /**
      * 将要显示的壁纸的资源ID
+     *
      * @return 壁纸资源ID
      */
     public int getWillShowWallpaperId() {
@@ -334,11 +410,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * setWallpaper on BackScreen 设置背屏的锁屏壁纸 从本地默认的壁纸中
      * liuwenrong@coolpad.com 17/03/16
      */
-//    public void setEpdLockScreenWallpaper(){
     @Override
     public void setEpdWallpaperFromLocal() {
-
-        Log.i(TAG, "setEpdWallpaperFromLocal: " + Log.getStackTraceString(new Throwable()));
         mPanelHolder.setBackgroundResource(getWillShowWallpaperId());
         mShowDetailTextView.setVisibility(View.GONE);
         DisplayManager displayManager = (DisplayManager) mContext.getSystemService(Context.DISPLAY_SERVICE);
@@ -348,10 +421,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setWillWallpaperIndex();
 
     }
-
-    private SharedPreferences mSharedPreferences;// 共享参数,判断是否第一次打开SystemUI,记录当前第几张壁纸
-
-    public static final String SHARED_PREFERENCES_NAME = "baoliyota_spf";
 
     /**
      * @return SharedPreferences对象
@@ -365,6 +434,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     /**
      * 从共享参数中读取,一般第一次启动时调用
+     *
      * @return 将要显示的壁纸的索引
      */
     public int getWallPaperIndexFromSP() {
@@ -394,17 +464,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void setEpdWallpaper(boolean isOpen) {
 
-        if (isOpen) {
-            android.util.Log.i(TAG + "--170324", "setEpdWallpaper: 设置壁纸");
-            if (com.android.baoliyota.network.Utils.isNetworkConnected(mContext)) {
-
-                mPresenter.start();//先从网络获取背屏数据
-            } else {
-
-                setEpdWallpaperFromLocal();
-//                setEpdLockScreenWallpaper();
-            }
-        } else {
+        if (isOpen) { //BLauncher中设置为显示壁纸
+            mPresenter.start();//先从网络或者内存中获取背屏数据
+        } else { //BLauncher中设置为显示today页,即隐藏壁纸和图书推荐
             mPanelHolder.setBackgroundResource(0);//设置为透明的壁纸
 //            mPanelHolder.setVisibility(View.INVISIBLE);
 //            mBackdrop.setVisibility(View.INVISIBLE);
@@ -414,8 +476,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         }
     }
-
-    EpdScreenBean.DataBean mBookData;
 
     /**
      * 设置图书推荐
@@ -428,17 +488,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         mShowDetailTextView.setVisibility(View.VISIBLE);
         mBookData = data;
-
-        Log.i(TAG, "setEpdBookRecommend: " + Log.getStackTraceString(new Throwable()));
         switch (type) {
             case ApiConstants.RES_TYPE_BACK_READER:
-                mShowDetailTextView.setOnClickListener(onStartBRListener);
+                if (mBookData.getBookId() != 0 && mBookData.getDownUrl() != null && mBookData.getFileFormat() != 0) {
+                    mShowDetailTextView.setOnClickListener(onStartBRListener);
+                } else { //有空数据时,不显示跳转BR的按钮
+                    mShowDetailTextView.setVisibility(View.GONE);
+                }
                 break;
             case ApiConstants.RES_TYPE_IREADER:
                 mShowDetailTextView.setOnClickListener(onStartIRListener);
                 break;
         }
 
+        // 从内存或磁盘缓存中读取并显示图片
         mPresenter.loadImage(data.getPicUrl(), loaderListener);
 
     }
@@ -452,24 +515,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void setEpdWallpaperFromNet(EpdScreenBean.DataBean data) {
 
         mShowDetailTextView.setVisibility(View.GONE);
+        // 从内存或磁盘缓存中读取并显示图片
         mPresenter.loadImage(data.getPicUrl(), loaderListener);
     }
-
-
-    IBaoliYotaImageLoader.LoaderListener<Drawable> loaderListener = new IBaoliYotaImageLoader.LoaderListener<Drawable>() {
-        @Override
-        public void onResourceReady(Drawable drawable) {
-            mPanelHolder.setBackground(drawable);
-            mPanelHolder.setVisibility(View.VISIBLE);
-
-        }
-
-        @Override
-        public void onLoadFailed(Exception e, Drawable errorDrawable) {
-            setEpdWallpaperFromLocal();
-
-        }
-    };
 
     @Override
     public void setPresenter(@NonNull IEpdScreenContract.IPresenter presenter) {
@@ -480,7 +528,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public Context getContext() {
         return mContext;
     }
-
 
     private void startBookAppToShowDetail(String packageName, String className) {
 
@@ -494,11 +541,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             intent.addCategory(Intent.CATEGORY_LAUNCHER);
             ComponentName cn = new ComponentName(packageName, className);
             intent.setComponent(cn);
+            // 书籍的数据封装成json传给BR
+            String json = new GsonBuilder().create().toJson(mBookData);
             intent.putExtra(ApiConstants.INTENT_FLAG_TYPE, ApiConstants.FLAG_TYPE_EPD_SCREEN);
+            intent.putExtra(ApiConstants.INTENT_FLAG_STR, json);
             intent.putExtra(ApiConstants.INTENT_BOOK_ID, mBookData.getBookId());
             // TODO: 2017/3/30  由于BR还没做完图书推荐的处理,
-//            startActivity(intent);
-            Toast.makeText(mContext, "当前阅读器不存在", Toast.LENGTH_LONG).show();
+            mContext.startActivity(intent);
+//            Toast.makeText(mContext, "当前阅读器不存在", Toast.LENGTH_LONG).show();
         } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(mContext, "当前阅读器不存在", Toast.LENGTH_LONG).show();
@@ -507,19 +557,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
-    View.OnClickListener onStartBRListener = new View.OnClickListener() {
-        @Override
-        public void onClick(View v) {
-            Log.i(TAG, "onClick: " + Log.getStackTraceString(new Throwable()));
-            startBookAppToShowDetail(ApiConstants.BR_PACKAGE_NAME, ApiConstants.BR_CLASS_NAME);
-        }
-    };
+/**
+ * BaoliYota end
+ */
 
-    View.OnClickListener onStartIRListener = new View.OnClickListener() {
-        @Override
-        public void onClick(View v) {
-//            startBookAppToShowDetail(ApiConstants.IR_PACKAGE_NAME, ApiConstants.IR_CLASS_NAME);
-            Toast.makeText(mContext, "IR阅读器不存在", Toast.LENGTH_LONG).show();
-        }
-    };
 }
