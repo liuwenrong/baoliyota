@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
       <module fileurl="file://$PROJECT_DIR$/baoliyota.iml" filepath="$PROJECT_DIR$/baoliyota.iml" />
+      <module fileurl="file://$PROJECT_DIR$/cylib/cylib.iml" filepath="$PROJECT_DIR$/cylib/cylib.iml" />
     </modules>
   </component>
 </project>

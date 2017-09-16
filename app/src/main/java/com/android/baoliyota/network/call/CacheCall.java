@@ -103,7 +103,12 @@ public class CacheCall<T> implements Call<T> {
         if (mCallback == null){
             return;
         }
-        mCallback.onError(call, response, e);
+        BaoliYotaHttpManager.getInstance().getDelivery().post(new Runnable() {
+            @Override
+            public void run() {
+                mCallback.onError(call, response, e);                //请求失败回调 （UI线程）
+            }
+        });
 
     }
 
